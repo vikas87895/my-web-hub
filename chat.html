@@ -145,11 +145,41 @@
             } catch(e) { alert("Message failed! Check network connection."); }
         }
 
-        function sendFile() {
-            const file = document.getElementById('fileInput').files[0];
-            if(!file) return;
-            alert("File upload system trigger configuration initialization...");
+        async function sendFile() {
+    const file = document.getElementById('fileInput').files[0];
+    if(!file) return;
+
+    // File ka size check (Google Sheet capability ke hisaab se max 5-10MB rakhein)
+    if(file.size > 15 * 1024 * 1024) {
+        alert("File bohot badi h! Kripya 15MB se chhoti file chunein.");
+        return;
+    }
+
+    const win = document.getElementById('msgWindow');
+    win.innerHTML += `<div class="msg sent"><div>⏳ Sending file: ${file.name}...</div></div>`;
+    win.scrollTop = win.scrollHeight;
+
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+        const fileDataURL = e.target.result; // Base64 Data String
+        const customMessage = `📁 File: <a href="${fileDataURL}" download="${file.name}" style="color:#f43f5e; font-weight:bold; text-decoration:underline;"><i class="fa-solid fa-file-arrow-down"></i> ${file.name}</a>`;
+
+        try {
+            await fetch(SCRIPT_URL, {
+                method: 'POST',
+                body: JSON.stringify({ 
+                    action: "sync", 
+                    username: activeUser, 
+                    data: [{data: `To ${targetUser}: ${customMessage}`, time: new Date().toLocaleString()}] 
+                })
+            });
+            loadChatHistoryFromServer();
+        } catch(err) {
+            alert("File send nahi ho payi, check internet connection!");
         }
+    };
+    reader.readAsDataURL(file);
+}
 
         window.addEventListener('load', fetchUsersFromSheet);
     </script>
