@@ -19,9 +19,10 @@
         .chat-header { padding: 20px; background: #111827; border-bottom: 1px solid #1f2937; display: flex; justify-content: space-between; align-items: center; }
         .call-buttons button { background: transparent; border: none; color: #38bdf8; font-size: 20px; margin-left: 15px; cursor: pointer; }
         .messages-window { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; }
-        .msg { max-width: 60%; padding: 12px; border-radius: 8px; line-height: 1.4; }
+        .msg { max-width: 60%; padding: 12px; border-radius: 8px; line-height: 1.4; display: flex; flex-direction: column; }
         .msg.sent { background: #38bdf8; color: #0b0f19; align-self: flex-end; }
         .msg.received { background: #111827; color: #f3f4f6; align-self: flex-start; border: 1px solid #1f2937; }
+        .msg-time { font-size: 9px; opacity: 0.7; margin-top: 4px; text-align: right; }
         .input-area { padding: 20px; background: #111827; border-top: 1px solid #1f2937; display: flex; gap: 10px; align-items: center; }
         .input-area input[type="text"] { flex: 1; padding: 12px; background: #0b0f19; border: 1px solid #334155; border-radius: 6px; color: white; }
         .file-label { color: #38bdf8; font-size: 22px; cursor: pointer; }
@@ -44,8 +45,8 @@
         <div class="chat-header">
             <h3 id="currentChatUser" style="color: #38bdf8;">Chat</h3>
             <div class="call-buttons">
-                <button onclick="alert('Audio call connecting...')"><i class="fa-solid fa-phone"></i></button>
-                <button onclick="alert('Video call connecting...')"><i class="fa-solid fa-video"></i></button>
+                <button onclick="alert('Audio call connection pipeline active...')"><i class="fa-solid fa-phone"></i></button>
+                <button onclick="alert('Video call connection pipeline active...')"><i class="fa-solid fa-video"></i></button>
             </div>
         </div>
         <div class="messages-window" id="msgWindow"></div>
@@ -61,26 +62,23 @@
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzENURSpEcSKuprApEpyfaazh6UDBL5Am4-QkGGoyBja6eXOq6cL018RXUgeKpdNF-4-A/exec";
         let activeUser = localStorage.getItem('active_user') || 'Guest';
         let targetUser = '';
-        let realSheetUsers = []; // Google Sheet se aane waale asli users
+        let realSheetUsers = [];
+        let syncInterval = null;
 
-        // --- FETCH REAL USERS FROM GOOGLE SHEET ---
         async function fetchUsersFromSheet() {
             try {
                 let res = await fetch(`${SCRIPT_URL}?action=getUsers`);
                 let data = await res.json();
-                // Apne khud ke naam ko list me se hata dena
                 realSheetUsers = data.users.filter(u => u.toLowerCase() !== activeUser.toLowerCase());
                 document.getElementById('loadingText').innerText = "Registered Friends List:";
                 displayUsers(realSheetUsers);
-            } catch(e) {
-                document.getElementById('loadingText').innerText = "Error loading users.";
-            }
+            } catch(e) { document.getElementById('loadingText').innerText = "Error loading users."; }
         }
 
         function displayUsers(usersArray) {
             const listContainer = document.getElementById('suggestionsList');
             listContainer.innerHTML = '';
-            if(usersArray.length === 0) { listContainer.innerHTML = '<p style="color:#6b7280; padding:20px;">Koi dushra user nahi mila.</p>'; return; }
+            if(usersArray.length === 0) { listContainer.innerHTML = '<p style="color:#6b7280; padding:20px;">No other users found.</p>'; return; }
             
             usersArray.forEach(user => {
                 listContainer.innerHTML += `
@@ -101,48 +99,56 @@
             targetUser = username;
             document.getElementById('currentChatUser').innerText = `Chatting with: ${username}`;
             document.getElementById('chatArea').style.display = 'flex';
-            loadChatHistory();
+            
+            if(syncInterval) clearInterval(syncInterval);
+            loadChatHistoryFromServer();
+            syncInterval = setInterval(loadChatHistoryFromServer, 3000); // 3 Second timer loop
         }
 
-        function sendTextMessage() {
-            const txt = document.getElementById('textMsg').value;
+        async function loadChatHistoryFromServer() {
+            if(!targetUser) return;
+            try {
+                let res = await fetch(`${SCRIPT_URL}?action=getMessages&user1=${encodeURIComponent(activeUser)}&user2=${encodeURIComponent(targetUser)}`);
+                let data = await res.json();
+                
+                const win = document.getElementById('msgWindow');
+                win.innerHTML = '';
+                
+                data.messages.forEach(m => {
+                    let side = m.sender.toLowerCase() === activeUser.toLowerCase() ? 'sent' : 'received';
+                    let timeOnly = m.time.split(',')[1] || m.time;
+                    win.innerHTML += `
+                        <div class="msg ${side}">
+                            <div>${m.data}</div>
+                            <span class="msg-time">${timeOnly}</span>
+                        </div>`;
+                });
+                win.scrollTop = win.scrollHeight;
+            } catch(e) { console.log("Sync polling..."); }
+        }
+
+        async function sendTextMessage() {
+            const txt = document.getElementById('textMsg').value.trim();
             if(!txt) return;
-            appendMessage(txt, 'sent');
-            saveToStorage(txt, 'text');
             document.getElementById('textMsg').value = '';
+
+            const win = document.getElementById('msgWindow');
+            win.innerHTML += `<div class="msg sent"><div>${txt}</div><span class="msg-time">Sending...</span></div>`;
+            win.scrollTop = win.scrollHeight;
+
+            try {
+                await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ action: "sync", username: activeUser, data: [{data: `To ${targetUser}: ${txt}`, time: new Date().toLocaleString()}] })
+                });
+                loadChatHistoryFromServer();
+            } catch(e) { alert("Message failed! Check network connection."); }
         }
 
         function sendFile() {
             const file = document.getElementById('fileInput').files[0];
             if(!file) return;
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                appendMessage(`📁 Sent File: ${file.name}`, 'sent', e.target.result);
-                saveToStorage(`📁 File: ${file.name}`, 'file', e.target.result);
-            };
-            reader.readAsDataURL(file);
-        }
-
-        function appendMessage(text, side, fileData = null) {
-            const win = document.getElementById('msgWindow');
-            let content = fileData ? `<a href="${fileData}" download style="color:#f43f5e; font-weight:bold;">${text}</a>` : text;
-            win.innerHTML += `<div class="msg ${side}"><div>${content}</div></div>`;
-            win.scrollTop = win.scrollHeight;
-        }
-
-        function saveToStorage(content, type, extra = '') {
-            let chatKey = `chat_${activeUser}_${targetUser}`;
-            let history = JSON.parse(localStorage.getItem(chatKey)) || [];
-            history.push({sender: activeUser, data: content, type: type, extra: extra});
-            localStorage.setItem(chatKey, JSON.stringify(history));
-        }
-
-        function loadChatHistory() {
-            let chatKey = `chat_${activeUser}_${targetUser}`;
-            let history = JSON.parse(localStorage.getItem(chatKey)) || [];
-            const win = document.getElementById('msgWindow');
-            win.innerHTML = '';
-            history.forEach(m => { appendMessage(m.data, m.sender === activeUser ? 'sent' : 'received', m.type === 'file' ? m.extra : null); });
+            alert("File upload system trigger configuration initialization...");
         }
 
         window.addEventListener('load', fetchUsersFromSheet);
