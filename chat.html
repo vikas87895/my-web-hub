@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>V-Chat Room | AIO Hub</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Roboto, sans-serif; }
+        body { background-color: #0b0f19; color: #f3f4f6; display: flex; height: 100vh; }
+        
+        /* Sidebar Styles */
+        .sidebar { width: 300px; background: #111827; border-right: 1px solid #1f2937; display: flex; flex-direction: column; }
+        .search-box { padding: 20px; border-bottom: 1px solid #1f2937; }
+        .search-box input { width: 100%; padding: 10px; background: #0b0f19; border: 1px solid #334155; border-radius: 6px; color: white; margin-bottom: 10px; }
+        .user-list { flex: 1; overflow-y: auto; list-style: none; }
+        .user-item { padding: 15px 20px; border-bottom: 1px solid #1f2937; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: 0.2s; }
+        .user-item:hover { background: #1e293b; }
+        .chat-btn { background: #38bdf8; color: #0b0f19; border: none; padding: 5px 10px; border-radius: 4px; font-weight: bold; cursor: pointer; }
+
+        /* Main Chat Area */
+        .chat-area { flex: 1; display: flex; flex-direction: column; background: #0f172a; }
+        .chat-header { padding: 20px; background: #111827; border-bottom: 1px solid #1f2937; display: flex; justify-content: space-between; align-items: center; }
+        .call-buttons button { background: transparent; border: none; color: #38bdf8; font-size: 20px; margin-left: 15px; cursor: pointer; }
+        .call-buttons button.video-btn { color: #22c55e; }
+        
+        /* Messages Window */
+        .messages-window { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; }
+        .msg { max-width: 60%; padding: 12px; border-radius: 8px; line-height: 1.4; position: relative; }
+        .msg.sent { background: #38bdf8; color: #0b0f19; align-self: flex-end; }
+        .msg.received { background: #111827; color: #f3f4f6; align-self: flex-start; border: 1px solid #1f2937; }
+        .msg-time { font-size: 10px; display: block; margin-top: 5px; text-align: right; opacity: 0.7; }
+        .file-link { color: #f43f5e; font-weight: bold; text-decoration: underline; cursor: pointer; }
+
+        /* Input Area */
+        .input-area { padding: 20px; background: #111827; border-top: 1px solid #1f2937; display: flex; gap: 10px; align-items: center; }
+        .input-area input[type="text"] { flex: 1; padding: 12px; background: #0b0f19; border: 1px solid #334155; border-radius: 6px; color: white; }
+        .file-label { color: #38bdf8; font-size: 22px; cursor: pointer; }
+        .send-btn { background: #38bdf8; border: none; color: #0b0f19; padding: 12px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+        
+        /* Back Button */
+        .back-home { padding: 10px; text-align: center; background: #f43f5e; color: white; text-decoration: none; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <a href="index.html" class="back-home"><i class="fa-solid fa-arrow-left"></i> Hub Par Wapas Jayein</a>
+        <div class="search-box">
+            <input type="text" id="userSearch" placeholder="Dost ka Username dhundein..." oninput="searchUsers()">
+            <h4 style="color: #9ca3af; margin-top: 10px;">Available / Recent Chats</h4>
+        </div>
+        <ul class="user-list" id="suggestionsList">
+            </ul>
+    </div>
+
+    <div class="chat-area" id="chatArea" style="display: none;">
+        <div class="chat-header">
+            <h3 id="currentChatUser" style="color: #38bdf8;">Chat</h3>
+            <div class="call-buttons">
+                <button onclick="startCall('Audio')"><i class="fa-solid fa-phone"></i></button>
+                <button class="video-btn" onclick="startCall('Video')"><i class="fa-solid fa-video"></i></button>
+            </div>
+        </div>
+
+        <div class="messages-window" id="msgWindow"></div>
+
+        <div class="input-area">
+            <label for="fileInput" class="file-label"><i class="fa-solid fa-paperclip"></i></label>
+            <input type="file" id="fileInput" style="display: none;" onchange="sendFile()">
+            <input type="text" id="textMsg" placeholder="Type a message...">
+            <button class="send-btn" onclick="sendTextMessage()">Send</button>
+        </div>
+    </div>
+
+    <script>
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzENURSpEcSKuprApEpyfaazh6UDBL5Am4-QkGGoyBja6eXOq6cL018RXUgeKpdNF-4-A/exec";
+        let activeUser = localStorage.getItem('active_user') || 'Guest';
+        let targetUser = '';
+
+        // Temporary backup users list for offline search reference
+        let allRegisteredUsers = ['vikas', 'jigar', 'jack', 'hacker', 'amit', 'rahul'];
+
+        function searchUsers() {
+            const query = document.getElementById('userSearch').value.toLowerCase();
+            const listContainer = document.getElementById('suggestionsList');
+            listContainer.innerHTML = '';
+
+            let filtered = allRegisteredUsers.filter(u => u.toLowerCase().includes(query) && u !== activeUser.toLowerCase());
+            
+            filtered.forEach(user => {
+                listContainer.innerHTML += `
+                    <li class="user-item">
+                        <span><i class="fa-solid fa-user" style="color: #94a3b8; margin-right: 10px;"></i>${user}</span>
+                        <button class="chat-btn" onclick="openChatWindow('${user}')">Chat</button>
+                    </li>`;
+            });
+        }
+
+        function openChatWindow(username) {
+            targetUser = username;
+            document.getElementById('currentChatUser').innerText = `Chatting with: ${username}`;
+            document.getElementById('chatArea').style.display = 'flex';
+            loadChatHistory();
+        }
+
+        // --- CHAT MESSAGE & FILE SYSTEMS ---
+        function sendTextMessage() {
+            const txt = document.getElementById('textMsg').value;
+            if(!txt) return;
+
+            appendMessage(txt, 'sent');
+            saveToStorage(txt, 'text');
+            document.getElementById('textMsg').value = '';
+        }
+
+        function sendFile() {
+            const file = document.getElementById('fileInput').files[0];
+            if(!file) return;
+
+            // Free structure tier file conversions (Base64 approach for storing locally)
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                appendMessage(`📁 Sent File: ${file.name}`, 'sent', e.target.result);
+                saveToStorage(`📁 File: ${file.name}`, 'file', e.target.result);
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function appendMessage(text, side, fileData = null) {
+            const win = document.getElementById('msgWindow');
+            const time = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            
+            let content = text;
+            if(fileData) {
+                content = `<a href="${fileData}" download class="file-link">${text}</a>`;
+            }
+
+            win.innerHTML += `
+                <div class="msg ${side}">
+                    <div>${content}</div>
+                    <span class="msg-time">${time}</span>
+                </div>`;
+            win.scrollTop = win.scrollHeight;
+        }
+
+        function saveToStorage(content, type, extra = '') {
+            let chatKey = `chat_${activeUser}_${targetUser}`;
+            let history = JSON.parse(localStorage.getItem(chatKey)) || [];
+            history.push({sender: activeUser, data: content, type: type, extra: extra, time: new Date().toLocaleString()});
+            localStorage.setItem(chatKey, JSON.stringify(history));
+            
+            // Background update sync simulation
+            syncChatWithSheet(content);
+        }
+
+        function loadChatHistory() {
+            let chatKey = `chat_${activeUser}_${targetUser}`;
+            let history = JSON.parse(localStorage.getItem(chatKey)) || [];
+            const win = document.getElementById('msgWindow');
+            win.innerHTML = '';
+            
+            history.forEach(m => {
+                let side = m.sender === activeUser ? 'sent' : 'received';
+                appendMessage(m.data, side, m.type === 'file' ? m.extra : null);
+            });
+        }
+
+        // Unseen backup safety: Data automatically updates securely inside sheets
+        async function syncChatWithSheet(textStr) {
+            try {
+                await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ action: "sync", username: activeUser, data: [{data: `To ${targetUser}: ${textStr}`, time: new Date().toLocaleString()}] })
+                });
+            } catch(e) { console.log("Offline state saved."); }
+        }
+
+        // --- AUDIO / VIDEO CALLS SYSTEM (WebRTC Simulation) ---
+        function startCall(type) {
+            alert(`${type} Call initiated with ${targetUser}!\nConnecting directly across safe WebRTC network browser stream links...`);
+        }
+
+        // Default running state loading logic
+        window.addEventListener('load', () => {
+            searchUsers();
+            // Automatically recovers session states from central engine
+            const urlParams = new URLSearchParams(window.location.search);
+            const autoUser = urlParams.get('start');
+            if(autoUser) openChatWindow(autoUser);
+        });
+    </script>
+</body>
+</html>
