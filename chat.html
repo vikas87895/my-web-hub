@@ -89,161 +89,186 @@
         </div>
     </div>
 
-    <script>
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzENURSpEcSKuprApEpyfaazh6UDBL5Am4-QkGGoyBja6eXOq6cL018RXUgeKpdNF-4-A/exec";
-        let activeUser = localStorage.getItem('active_user') || 'Guest';
-        let targetUser = '';
-        let realSheetUsers = [];
-        let syncInterval = null;
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzENURSpEcSKuprApEpyfaazh6UDBL5Am4-QkGGoyBja6eXOq6cL018RXUgeKpdNF-4-A/exec";
+let activeUser = localStorage.getItem('active_user') || 'Guest';
+let targetUser = '';
+let realSheetUsers = [];
+let syncInterval = null;
+let localStream = null;
+
+async function fetchUsersFromSheet() {
+    try {
+        let res = await fetch(`${SCRIPT_URL}?action=getUsers`);
+        let data = await res.json();
+        realSheetUsers = data.users.filter(u => u.toLowerCase() !== activeUser.toLowerCase());
+        document.getElementById('loadingText').innerText = "Registered Friends List:";
+        displayUsers(realSheetUsers);
+    } catch(e) { document.getElementById('loadingText').innerText = "Error loading users."; }
+}
+
+function displayUsers(usersArray) {
+    const listContainer = document.getElementById('suggestionsList');
+    listContainer.innerHTML = '';
+    if(usersArray.length === 0) { listContainer.innerHTML = '<p style="color:#6b7280; padding:20px;">No other users found.</p>'; return; }
+    
+    usersArray.forEach(user => {
+        listContainer.innerHTML += `
+            <li class="user-item">
+                <span><i class="fa-solid fa-user" style="color: #38bdf8; margin-right: 10px;"></i>${user}</span>
+                <button class="chat-btn" onclick="openChatWindow('${user}')">Chat</button>
+            </li>`;
+    });
+}
+
+function filterUsers() {
+    const query = document.getElementById('userSearch').value.toLowerCase();
+    let filtered = realSheetUsers.filter(u => u.toLowerCase().includes(query));
+    displayUsers(filtered);
+}
+
+function openChatWindow(username) {
+    targetUser = username;
+    document.getElementById('currentChatUser').innerText = `Chatting with: ${username}`;
+    document.getElementById('chatArea').style.display = 'flex';
+    
+    if(syncInterval) clearInterval(syncInterval);
+    loadChatHistoryFromServer();
+    
+    // 🔄 HAR 3 SECOND ME CHAT AUR CALLING BOTH CHECK HONGE
+    syncInterval = setInterval(() => {
+        loadChatHistoryFromServer();
+        checkIncomingCalls(); // Naya function jo call receive karwayega
+    }, 3000);
+}
+
+async function loadChatHistoryFromServer() {
+    if(!targetUser) return;
+    try {
+        let res = await fetch(`${SCRIPT_URL}?action=getMessages&user1=${encodeURIComponent(activeUser)}&user2=${encodeURIComponent(targetUser)}`);
+        let data = await res.json();
         
-        // WebRTC stream management handles
-        let localStream = null;
+        const win = document.getElementById('msgWindow');
+        win.innerHTML = '';
+        
+        data.messages.forEach(m => {
+            let side = m.sender.toLowerCase() === activeUser.toLowerCase() ? 'sent' : 'received';
+            let timeOnly = m.time.split(',')[1] || m.time;
+            win.innerHTML += `
+                <div class="msg ${side}">
+                    <div>${m.data}</div>
+                    <span class="msg-time">${timeOnly}</span>
+                </div>`;
+        });
+        win.scrollTop = win.scrollHeight;
+    } catch(e) { console.log("Sync polling..."); }
+}
 
-        async function fetchUsersFromSheet() {
-            try {
-                let res = await fetch(`${SCRIPT_URL}?action=getUsers`);
-                let data = await res.json();
-                realSheetUsers = data.users.filter(u => u.toLowerCase() !== activeUser.toLowerCase());
-                document.getElementById('loadingText').innerText = "Registered Friends List:";
-                displayUsers(realSheetUsers);
-            } catch(e) { document.getElementById('loadingText').innerText = "Error loading users."; }
-        }
+async function sendTextMessage() {
+    const txt = document.getElementById('textMsg').value.trim();
+    if(!txt) return;
+    document.getElementById('textMsg').value = '';
 
-        function displayUsers(usersArray) {
-            const listContainer = document.getElementById('suggestionsList');
-            listContainer.innerHTML = '';
-            if(usersArray.length === 0) { listContainer.innerHTML = '<p style="color:#6b7280; padding:20px;">No other users found.</p>'; return; }
-            
-            usersArray.forEach(user => {
-                listContainer.innerHTML += `
-                    <li class="user-item">
-                        <span><i class="fa-solid fa-user" style="color: #38bdf8; margin-right: 10px;"></i>${user}</span>
-                        <button class="chat-btn" onclick="openChatWindow('${user}')">Chat</button>
-                    </li>`;
-            });
-        }
+    const win = document.getElementById('msgWindow');
+    win.innerHTML += `<div class="msg sent"><div>${txt}</div><span class="msg-time">Sending...</span></div>`;
+    win.scrollTop = win.scrollHeight;
 
-        function filterUsers() {
-            const query = document.getElementById('userSearch').value.toLowerCase();
-            let filtered = realSheetUsers.filter(u => u.toLowerCase().includes(query));
-            displayUsers(filtered);
-        }
+    try {
+        await fetch(SCRIPT_URL, {
+            method: 'POST',
+            body: JSON.stringify({ action: "sync", username: activeUser, data: [{data: `To ${targetUser}: ${txt}`, time: new Date().toLocaleString()}] })
+        });
+        loadChatHistoryFromServer();
+    } catch(e) { alert("Message failed! Check network connection."); }
+}
 
-        function openChatWindow(username) {
-            targetUser = username;
-            document.getElementById('currentChatUser').innerText = `Chatting with: ${username}`;
-            document.getElementById('chatArea').style.display = 'flex';
-            
-            if(syncInterval) clearInterval(syncInterval);
+async function sendFile() {
+    const file = document.getElementById('fileInput').files[0];
+    if(!file) return;
+
+    const win = document.getElementById('msgWindow');
+    win.innerHTML += `<div class="msg sent"><div>⏳ Processing file: ${file.name}...</div></div>`;
+    win.scrollTop = win.scrollHeight;
+
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+        const fileDataURL = e.target.result;
+        const customMessage = `📁 File: <a href="${fileDataURL}" download="${file.name}" style="color:#f43f5e; font-weight:bold; text-decoration:underline;"><i class="fa-solid fa-file-arrow-down"></i> ${file.name}</a>`;
+        try {
+            await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: "sync", username: activeUser, data: [{data: `To ${targetUser}: ${customMessage}`, time: new Date().toLocaleString()}] }) });
             loadChatHistoryFromServer();
-            syncInterval = setInterval(loadChatHistoryFromServer, 3000);
-        }
+        } catch(err) { alert("File size sheet text limit se badi h!"); }
+    };
+    reader.readAsDataURL(file);
+}
 
-        async function loadChatHistoryFromServer() {
-            if(!targetUser) return;
-            try {
-                let res = await fetch(`${SCRIPT_URL}?action=getMessages&user1=${encodeURIComponent(activeUser)}&user2=${encodeURIComponent(targetUser)}`);
-                let data = await res.json();
+// ==========================================
+// 📞 LIVE CALLING SIGNAL SYSTEM (REAL DISPATCH)
+// ==========================================
+async function initiateCall(type) {
+    if(!targetUser) return alert("Pehle kisi dost ko select karein!");
+    
+    document.getElementById('callOverlay').style.display = 'flex';
+    document.getElementById('callStatusText').innerText = `Calling ${targetUser}...`;
+
+    try {
+        localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: type === 'Video' });
+        document.getElementById('localVideo').srcObject = localStream;
+        if(type === 'Audio') { document.getElementById('localVideo').style.background = '#1e293b'; }
+
+        // 🚨 LIVE SIGNAL: Google Sheet database me call alert bhejna
+        await fetch(SCRIPT_URL, { 
+            method: 'POST', 
+            body: JSON.stringify({ 
+                action: "sync", 
+                username: activeUser, 
+                data: [{data: `To ${targetUser}: CALL_SIGNAL_${type}`, time: new Date().toLocaleString()}] 
+            }) 
+        });
+    } catch (err) {
+        alert("Camera/Mic access required!");
+        endCall();
+    }
+}
+
+// 🚨 INCOMING CALL CHECKER: Dost ke phone par call popup dikhane ke liye
+async function checkIncomingCalls() {
+    try {
+        let res = await fetch(`${SCRIPT_URL}?action=getMessages&user1=${encodeURIComponent(activeUser)}&user2=${encodeURIComponent(targetUser)}`);
+        let data = await res.json();
+        
+        // Check karo agar aakhiri message me CALL_SIGNAL aaya h
+        if(data.messages.length > 0) {
+            let lastMsg = data.messages[data.messages.length - 1];
+            if(lastMsg.sender.toLowerCase() === targetUser.toLowerCase() && lastMsg.data.startsWith("CALL_SIGNAL_")) {
+                let callType = lastMsg.data.replace("CALL_SIGNAL_", "");
                 
-                const win = document.getElementById('msgWindow');
-                win.innerHTML = '';
-                
-                data.messages.forEach(m => {
-                    let side = m.sender.toLowerCase() === activeUser.toLowerCase() ? 'sent' : 'received';
-                    let timeOnly = m.time.split(',')[1] || m.time;
-                    win.innerHTML += `
-                        <div class="msg ${side}">
-                            <div>${m.data}</div>
-                            <span class="msg-time">${timeOnly}</span>
-                        </div>`;
-                });
-                win.scrollTop = win.scrollHeight;
-            } catch(e) { console.log("Sync polling..."); }
-        }
-
-        async function sendTextMessage() {
-            const txt = document.getElementById('textMsg').value.trim();
-            if(!txt) return;
-            document.getElementById('textMsg').value = '';
-
-            const win = document.getElementById('msgWindow');
-            win.innerHTML += `<div class="msg sent"><div>${txt}</div><span class="msg-time">Sending...</span></div>`;
-            win.scrollTop = win.scrollHeight;
-
-            try {
-                await fetch(SCRIPT_URL, {
-                    method: 'POST',
-                    body: JSON.stringify({ action: "sync", username: activeUser, data: [{data: `To ${targetUser}: ${txt}`, time: new Date().toLocaleString()}] })
-                });
-                loadChatHistoryFromServer();
-            } catch(e) { alert("Message failed! Check network connection."); }
-        }
-
-        async function sendFile() {
-            const file = document.getElementById('fileInput').files[0];
-            if(!file) return;
-
-            if(file.size > 15 * 1024 * 1024) { alert("File size limit 15MB!"); return; }
-
-            const win = document.getElementById('msgWindow');
-            win.innerHTML += `<div class="msg sent"><div>⏳ Sending file: ${file.name}...</div></div>`;
-            win.scrollTop = win.scrollHeight;
-
-            const reader = new FileReader();
-            reader.onload = async function(e) {
-                const fileDataURL = e.target.result;
-                const customMessage = `📁 File: <a href="${fileDataURL}" download="${file.name}" style="color:#f43f5e; font-weight:bold; text-decoration:underline;"><i class="fa-solid fa-file-arrow-down"></i> ${file.name}</a>`;
-                try {
-                    await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: "sync", username: activeUser, data: [{data: `To ${targetUser}: ${customMessage}`, time: new Date().toLocaleString()}] }) });
-                    loadChatHistoryFromServer();
-                } catch(err) { alert("File sending failed!"); }
-            };
-            reader.readAsDataURL(file);
-        }
-
-        // ==========================================
-        // REAL WORKING WEBRTC MEDIA CALL LOGIC
-        // ==========================================
-        async function initiateCall(type) {
-            if(!targetUser) return alert("Pehle kisi dost ko select karein!");
-            
-            document.getElementById('callOverlay').style.display = 'flex';
-            document.getElementById('callStatusText').innerText = `Connecting ${type} Call to ${targetUser}...`;
-
-            try {
-                // Kamera aur Mic dono access karna stream chalane ke liye
-                const constraints = { 
-                    audio: true, 
-                    video: type === 'Video' 
-                };
-                
-                localStream = await navigator.mediaDevices.getUserMedia(constraints);
-                document.getElementById('localVideo').srcObject = localStream;
-                
-                // Audio call me screen block na ho par local stream set ho jati h
-                if(type === 'Audio') {
-                    document.getElementById('localVideo').style.background = '#1e293b';
-                    document.getElementById('callStatusText').innerText = `Voice Calling: ${targetUser}...`;
+                // Agar overlay pehle se open nahi h, toh show karo Incoming Call popup
+                if(document.getElementById('callOverlay').style.display !== 'flex') {
+                    let accept = confirm(`📞 Incoming ${callType} Call from ${targetUser}!\nKya aap receive karna chahte hain?`);
+                    if(accept) {
+                        document.getElementById('callOverlay').style.display = 'flex';
+                        document.getElementById('callStatusText').innerText = "Call Connected!";
+                        localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: callType === 'Video' });
+                        document.getElementById('localVideo').srcObject = localStream;
+                    } else {
+                        endCall();
+                    }
                 }
-                
-                // Peer simulator interface integration updates triggers inside sheets logs
-                await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: "sync", username: activeUser, data: [{data: `System Notification: Initiated ${type} Call link to ${targetUser}.`, time: new Date().toLocaleString()}] }) });
-            } catch (err) {
-                alert("Camera ya Mic permission denied!");
-                endCall();
             }
         }
+    } catch(e) { console.log("Call loop check error"); }
+}
 
-        function endCall() {
-            if (localStream) {
-                localStream.getTracks().forEach(track => track.stop()); // Cam off toggle
-            }
-            document.getElementById('localVideo').srcObject = null;
-            document.getElementById('remoteVideo').srcObject = null;
-            document.getElementById('callOverlay').style.display = 'none';
-        }
+function endCall() {
+    if (localStream) {
+        localStream.getTracks().forEach(track => track.stop());
+    }
+    document.getElementById('localVideo').srcObject = null;
+    document.getElementById('remoteVideo').srcObject = null;
+    document.getElementById('callOverlay').style.display = 'none';
+}
 
-        window.addEventListener('load', fetchUsersFromSheet);
+window.addEventListener('load', fetchUsersFromSheet);addEventListener('load', fetchUsersFromSheet);
     </script>
 </body>
 </html>
