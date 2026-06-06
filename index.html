@@ -9,7 +9,6 @@
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Roboto, sans-serif; }
         body { background-color: #0b0f19; color: #f3f4f6; }
         
-        /* Premium Header Navigation */
         header { display: flex; justify-content: space-between; align-items: center; padding: 20px 5%; background: #111827; border-bottom: 1px solid #1f2937; position: sticky; top: 0; z-index: 100; }
         .logo { font-size: 22px; font-weight: bold; color: #38bdf8; letter-spacing: 1px; }
         .logo span { color: #f43f5e; }
@@ -22,13 +21,11 @@
 
         .container { max-width: 1100px; margin: 0 auto; padding: 40px 20px; }
 
-        /* Vikas Identity Profile Banner */
         .about-section { display: flex; align-items: center; gap: 40px; background: #111827; padding: 30px; border-radius: 16px; border: 1px solid #1f2937; margin-bottom: 50px; flex-wrap: wrap; }
         .profile-img { width: 160px; height: 160px; border-radius: 50%; object-fit: cover; border: 4px solid #38bdf8; box-shadow: 0 0 20px rgba(56, 189, 248, 0.2); }
         .about-text h1 { color: #38bdf8; margin-bottom: 10px; font-size: 28px; }
         .about-text p { color: #9ca3af; line-height: 1.6; font-size: 16px; }
 
-        /* Dynamic Component Layouts */
         .section-title { font-size: 24px; color: #f3f4f6; margin-bottom: 25px; border-left: 4px solid #f43f5e; padding-left: 12px; }
         .tools-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 25px; justify-content: center; margin-bottom: 50px; }
         .tool-card { background: #111827; border: 1px solid #1f2937; border-radius: 50%; width: 140px; height: 140px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-decoration: none; color: #f3f4f6; cursor: pointer; margin: 0 auto; transition: 0.3s; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
@@ -36,7 +33,6 @@
         .tool-card i { font-size: 32px; color: #38bdf8; margin-bottom: 10px; }
         .tool-card span { font-size: 13px; font-weight: 600; text-align: center; padding: 0 10px; }
         
-        /* Activity Storage UI Boxes */
         .history-box, .database-box { background: #111827; padding: 25px; border-radius: 12px; border: 1px solid #1f2937; margin-bottom: 40px; display: none; }
         .history-item { padding: 12px; border-bottom: 1px solid #1f2937; display: flex; justify-content: space-between; font-size: 14px; align-items: center; }
         .history-item span { color: #38bdf8; font-size: 12px; }
@@ -44,28 +40,19 @@
         .database-box { background: #1e293b; border-color: #334155; }
         .form-group { display: flex; gap: 15px; margin-bottom: 15px; flex-wrap: wrap; }
         .form-group input { flex: 1; min-width: 200px; padding: 12px; background: #0b0f19; border: 1px solid #334155; border-radius: 6px; color: white; }
-        .form-group input:focus { border-color: #38bdf8; outline: none; }
-        .sync-btn { padding: 12px 24px; background: #f43f5e; border: none; color: white; font-weight: bold; border-radius: 6px; cursor: pointer; transition: 0.2s; width: 100%; max-width: 200px; }
-        .sync-btn:hover { background: #e11d48; }
+        .sync-btn { padding: 12px 24px; background: #f43f5e; border: none; color: white; font-weight: bold; border-radius: 6px; cursor: pointer; transition: 0.2s; }
 
-        /* Secure Auth Modals (Popups) */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); justify-content: center; align-items: center; z-index: 1000; }
-        .modal-content { background: #111827; padding: 30px; border-radius: 12px; border: 1px solid #1f2937; width: 90%; max-width: 400px; position: relative; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .modal-content { background: #111827; padding: 30px; border-radius: 12px; border: 1px solid #1f2937; width: 90%; max-width: 400px; position: relative; }
         .modal-content h3 { color: #38bdf8; margin-bottom: 20px; text-align: center; font-size: 22px; }
         .modal-content input { width: 100%; padding: 12px; margin-bottom: 10px; background: #0b0f19; border: 1px solid #1f2937; border-radius: 6px; color: white; }
-        .modal-content input:focus { border-color: #38bdf8; outline: none; }
-        .modal-content button { width: 100%; padding: 12px; background: #38bdf8; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; color: #0b0f19; font-size: 16px; transition: 0.2s; }
-        .modal-content button:hover { background: #0ea5e9; }
+        .modal-content button { width: 100%; padding: 12px; background: #38bdf8; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; color: #0b0f19; font-size: 16px; }
         .close-modal { position: absolute; top: 12px; right: 18px; color: #9ca3af; cursor: pointer; font-size: 24px; }
-        .live-status { font-size: 12px; font-weight: bold; margin-bottom: 15px; display: block; padding-left: 2px; }
+        .live-status { font-size: 12px; font-weight: bold; margin-bottom: 15px; display: block; }
 
-        /* Footer System Contacts */
         footer { background: #111827; border-top: 1px solid #1f2937; padding: 40px 20px; text-align: center; color: #6b7280; margin-top: 60px; }
-        footer p { margin-bottom: 15px; }
-        .contact-links { display: flex; justify-content: center; gap: 25px; flex-wrap: wrap; }
-        .contact-item { display: flex; align-items: center; gap: 8px; color: #9ca3af; text-decoration: none; font-size: 15px; transition: 0.3s; }
-        .contact-item:hover { color: #38bdf8; }
-        .contact-item i { font-size: 18px; }
+        .contact-links { display: flex; justify-content: center; gap: 25px; flex-wrap: wrap; margin-top: 15px; }
+        .contact-item { display: flex; align-items: center; gap: 8px; color: #9ca3af; text-decoration: none; font-size: 15px; }
     </style>
 </head>
 <body>
@@ -112,7 +99,7 @@
                 </div>
                 <button type="submit" class="sync-btn">Save to Device</button>
             </form>
-            <div id="statusMessage" style="margin-top: 12px; color: #34d399; font-weight: 500;"></div>
+            <div id="statusMessage" style="margin-top: 12px; color: #34d399;"></div>
         </div>
     </div>
 
@@ -162,11 +149,9 @@
             } 
         }
 
-        // --- LIVE AVAILABILITY CHECKER FUNCTION ---
         async function liveCheckUser(username) {
             const statusSpan = document.getElementById('availabilityStatus');
             if(username.trim().length < 3) { statusSpan.innerText = ""; return; }
-            
             statusSpan.innerText = "Checking backend database...";
             statusSpan.style.color = "#fbbf24";
 
@@ -182,15 +167,14 @@
                     statusSpan.style.color = "#34d399";
                     isNameValid = true;
                 }
-            } catch(e) { statusSpan.innerText = "Network slow/offline state"; statusSpan.style.color = "#fbbf24"; isNameValid = true; }
+            } catch(e) { isNameValid = true; }
         }
 
-        // --- STRICT REGISTRATION SIGNUP PIPELINE ---
         async function handleSignup() {
             const user = document.getElementById('signupUser').value.trim();
             const pass = document.getElementById('signupPass').value;
             if(!user || !pass) return alert("Kripya poora details daalein!");
-            if(!isNameValid) return alert("Yeh username available nahi h, dushra select karein!");
+            if(!isNameValid) return alert("Username available nahi h!");
 
             try {
                 let res = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: "signup", username: user, password: pass }) });
@@ -199,13 +183,10 @@
                     alert("Registration Successful! Ab login kijiye."); 
                     closeModal('signupModal'); 
                     openModal('loginModal'); 
-                } else {
-                    alert(data.message);
-                }
-            } catch(e) { alert("Server connection alert, try again!"); }
+                } else { alert(data.message); }
+            } catch(e) { alert("Server connectivity issue!"); }
         }
 
-        // --- STRICT AUTHENTICATION LOGIN PIPELINE ---
         async function handleLogin() {
             const user = document.getElementById('loginUser').value.trim();
             const pass = document.getElementById('loginPass').value;
@@ -214,23 +195,18 @@
             try {
                 let res = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: "login", username: user, password: pass }) });
                 let data = await res.json();
-                
                 if(data.status === "success") {
                     localStorage.setItem('active_user', data.username);
                     checkLoginState();
                     closeModal('loginModal');
-                } else {
-                    alert(data.message);
-                }
+                } else { alert(data.message); }
             } catch(e) {
-                alert("Database engine login verified via local cache.");
                 localStorage.setItem('active_user', user);
                 checkLoginState();
                 closeModal('loginModal');
             }
         }
 
-        // --- HOMEPAGE SESSION AND RECENT HISTORY CONTROLLER ---
         function checkLoginState() {
             const user = localStorage.getItem('active_user');
             if(user) {
@@ -240,23 +216,21 @@
                 document.getElementById('dbBox').style.display = 'block';
                 document.getElementById('historyBox').style.display = 'block';
                 renderHistory();
-                syncDataWithServer(); // Active hote hi data automatic sheet par sync karega
+                syncDataWithServer();
             }
         }
 
         function logout() { localStorage.clear(); location.reload(); }
 
-        // --- OFFLINE-FIRST HISTORY TRACKER LOGIC ---
         function logAction(act) {
             const user = localStorage.getItem('active_user');
-            if(!user) return alert("Pehle upar se LOGIN karein tabhi activity register hogi!");
+            if(!user) return alert("Pehle upar se LOGIN karein!");
 
             let localLogs = JSON.parse(localStorage.getItem('offline_history')) || [];
             localLogs.push({ data: act, time: new Date().toLocaleString() });
             localStorage.setItem('offline_history', JSON.stringify(localLogs));
-            
             renderHistory();
-            syncDataWithServer(); // background tracking triggers
+            syncDataWithServer();
         }
 
         document.getElementById('dataForm').addEventListener('submit', function(e) {
@@ -264,19 +238,18 @@
             const val = document.getElementById('userdata').value;
             logAction(val);
             document.getElementById('userdata').value = '';
-            document.getElementById('statusMessage').innerText = "Saved to device database!";
+            document.getElementById('statusMessage').innerText = "Saved locally on device memory!";
         });
 
         function renderHistory() {
             const logs = JSON.parse(localStorage.getItem('offline_history')) || [];
             const container = document.getElementById('historyLogs');
-            container.innerHTML = logs.length === 0 ? '<p style="color:#6b7280; padding:10px;">Abhi tak koi nayi activity note nahi hui h.</p>' : '';
+            container.innerHTML = logs.length === 0 ? '<p style="color:#6b7280; padding:10px;">Abhi tak koi activity nahi hui h.</p>' : '';
             logs.forEach(log => { 
                 container.innerHTML += `<div class="history-item"><div>${log.data}</div><span>${log.time}</span></div>`; 
             });
         }
 
-        // --- AUTOMATIC BACKGROUND SERVER DATABASE SYNC ---
         async function syncDataWithServer() {
             const user = localStorage.getItem('active_user');
             let localLogs = JSON.parse(localStorage.getItem('offline_history')) || [];
@@ -290,11 +263,9 @@
                 let result = await response.json();
                 if(result.status === "success") {
                     localStorage.removeItem('offline_history');
-                    document.getElementById('statusMessage').innerText = "Wow! Device data sheet server par sync ho gaya h!";
+                    document.getElementById('statusMessage').innerText = "Device data sheet server par automatic sync ho gaya h!";
                 }
-            } catch (error) {
-                console.log("Server active nahi h, encryption data phone local cache me secure h.");
-            }
+            } catch (error) { console.log("Offline mode retention."); }
         }
 
         window.addEventListener('load', checkLoginState);
